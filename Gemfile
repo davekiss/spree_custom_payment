@@ -49,3 +49,4 @@ gem 'spree_gateway', github: 'spree/spree_gateway', :branch => 'master'
 gem 'spree_auth_devise', :github => 'spree/spree_auth_devise', :branch => 'master'
 
 gem 'pry'
+gem 'httparty'

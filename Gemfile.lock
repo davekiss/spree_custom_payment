@@ -298,6 +298,7 @@ PLATFORMS
 
 DEPENDENCIES
   coffee-rails (~> 4.0.0)
+  httparty
   jbuilder (~> 1.2)
   jquery-rails
   pry
