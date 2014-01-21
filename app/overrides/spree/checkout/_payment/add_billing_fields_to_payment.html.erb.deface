@@ -1,0 +1,9 @@
+<!-- insert_before "[data-hook='buttons'], .form-buttons[data-hook]" -->
+
+<fieldset id="billing" data-hook>
+  <%= form.fields_for :bill_address_attributes, @order.bill_address || @order.build_bill_address do |bill_form| %>
+
+    <legend align="center"><%= Spree.t(:billing_address) %></legend>
+    <%= render :partial => 'spree/address/form', :locals => { :form => bill_form, :address_type => 'billing', :address => @order.bill_address || @order.build_bill_address } %>
+  <% end %>
+</fieldset>
