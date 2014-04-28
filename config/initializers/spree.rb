@@ -13,4 +13,5 @@ Spree.config do |config|
   config.address_requires_state = false
 end
 
+Spree::Auth::Config[:registration_step] = false
 Spree.user_class = "Spree::User"
