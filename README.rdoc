@@ -1,15 +1,14 @@
 == README
 
-Ruby 2.0.0, Rails 4.0.1, Spree master
+Ruby 2.0.0, Rails 4.0.3, Spree 2-2-stable
 
 == The Issue
-In attempting to customize the payment step of Spree, the credit card details get reloaded after submitting them and are lost before sending them to the gateway. I'm trying to add the billing address to the payment step. If the address is a US Illinois address, we must add a tax adjustment.
-
-== Bonus points
-I seem to have to set the `config.address_requires_state = false` due to some kind of mistake I'm making in the deface template for the payment step. Any ideas?
+In attempting to customize the payment step of Spree, the order details are missing before sending them to the gateway during guest checkout. I'm trying to add the billing address to the payment step.
 
 == To Reproduce
 
- - Create new gateway based on the PayPalGateway and enter sandbox credentials
- - Create a new Tax Zone based on the US State of Illinois with a tax rate of 9.5%
- - Add an item to cart and attempt guest checkout with test credit card data
+- Seed database and add `binding.pry` to beginning of https://github.com/spree/spree/blob/f19a83870352510965924b58da81894bdcd67504/core/app/models/spree/payment/processing.rb#L120-L141
+- Create new Bogus gateway
+- Add an item to cart and attempt logged-out guest checkout with test credit card data
+
+Note that `order.email` is nil until `order.reload` is called. Also, the bill address association is not available until reloaded.
