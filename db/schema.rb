@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20140121171072) do
+ActiveRecord::Schema.define(version: 20140428020275) do
 
   create_table "spree_addresses", force: true do |t|
     t.string   "firstname"
@@ -77,6 +77,9 @@ ActiveRecord::Schema.define(version: 20140121171072) do
     t.datetime "updated_at"
   end
 
+  add_index "spree_calculators", ["calculable_id", "calculable_type"], name: "index_spree_calculators_on_calculable_id_and_calculable_type"
+  add_index "spree_calculators", ["id", "type"], name: "index_spree_calculators_on_id_and_type"
+
   create_table "spree_configurations", force: true do |t|
     t.string   "name"
     t.string   "type",       limit: 50
@@ -109,7 +112,12 @@ ActiveRecord::Schema.define(version: 20140121171072) do
     t.datetime "created_at"
     t.datetime "updated_at"
     t.string   "name"
+    t.integer  "user_id"
+    t.integer  "payment_method_id"
   end
+
+  add_index "spree_credit_cards", ["payment_method_id"], name: "index_spree_credit_cards_on_payment_method_id"
+  add_index "spree_credit_cards", ["user_id"], name: "index_spree_credit_cards_on_user_id"
 
   create_table "spree_gateways", force: true do |t|
     t.string   "type"
@@ -154,6 +162,7 @@ ActiveRecord::Schema.define(version: 20140121171072) do
     t.decimal  "additional_tax_total", precision: 10, scale: 2, default: 0.0
     t.decimal  "promo_total",          precision: 10, scale: 2, default: 0.0
     t.decimal  "included_tax_total",   precision: 10, scale: 2, default: 0.0, null: false
+    t.decimal  "pre_tax_amount",       precision: 8,  scale: 2
   end
 
   add_index "spree_line_items", ["order_id"], name: "index_spree_line_items_on_order_id"
@@ -189,6 +198,8 @@ ActiveRecord::Schema.define(version: 20140121171072) do
     t.datetime "updated_at"
   end
 
+  add_index "spree_option_values", ["option_type_id"], name: "index_spree_option_values_on_option_type_id"
+
   create_table "spree_option_values_variants", id: false, force: true do |t|
     t.integer "variant_id"
     t.integer "option_value_id"
@@ -198,16 +209,16 @@ ActiveRecord::Schema.define(version: 20140121171072) do
   add_index "spree_option_values_variants", ["variant_id"], name: "index_spree_option_values_variants_on_variant_id"
 
   create_table "spree_orders", force: true do |t|
-    t.string   "number",               limit: 32
-    t.decimal  "item_total",                      precision: 10, scale: 2, default: 0.0,     null: false
-    t.decimal  "total",                           precision: 10, scale: 2, default: 0.0,     null: false
+    t.string   "number",                 limit: 32
+    t.decimal  "item_total",                        precision: 10, scale: 2, default: 0.0,     null: false
+    t.decimal  "total",                             precision: 10, scale: 2, default: 0.0,     null: false
     t.string   "state"
-    t.decimal  "adjustment_total",                precision: 10, scale: 2, default: 0.0,     null: false
+    t.decimal  "adjustment_total",                  precision: 10, scale: 2, default: 0.0,     null: false
     t.integer  "user_id"
     t.datetime "completed_at"
     t.integer  "bill_address_id"
     t.integer  "ship_address_id"
-    t.decimal  "payment_total",                   precision: 10, scale: 2, default: 0.0
+    t.decimal  "payment_total",                     precision: 10, scale: 2, default: 0.0
     t.integer  "shipping_method_id"
     t.string   "shipment_state"
     t.string   "payment_state"
@@ -218,15 +229,21 @@ ActiveRecord::Schema.define(version: 20140121171072) do
     t.string   "currency"
     t.string   "last_ip_address"
     t.integer  "created_by_id"
-    t.decimal  "shipment_total",                  precision: 10, scale: 2, default: 0.0,     null: false
-    t.decimal  "additional_tax_total",            precision: 10, scale: 2, default: 0.0
-    t.decimal  "promo_total",                     precision: 10, scale: 2, default: 0.0
-    t.string   "channel",                                                  default: "spree"
-    t.decimal  "included_tax_total",              precision: 10, scale: 2, default: 0.0,     null: false
+    t.decimal  "shipment_total",                    precision: 10, scale: 2, default: 0.0,     null: false
+    t.decimal  "additional_tax_total",              precision: 10, scale: 2, default: 0.0
+    t.decimal  "promo_total",                       precision: 10, scale: 2, default: 0.0
+    t.string   "channel",                                                    default: "spree"
+    t.decimal  "included_tax_total",                precision: 10, scale: 2, default: 0.0,     null: false
+    t.integer  "item_count",                                                 default: 0
+    t.integer  "approver_id"
+    t.datetime "approved_at"
+    t.boolean  "confirmation_delivered",                                     default: false
+    t.boolean  "considered_risky",                                           default: false
   end
 
   add_index "spree_orders", ["completed_at"], name: "index_spree_orders_on_completed_at"
   add_index "spree_orders", ["number"], name: "index_spree_orders_on_number"
+  add_index "spree_orders", ["user_id", "created_by_id"], name: "index_spree_orders_on_user_id_and_created_by_id"
   add_index "spree_orders", ["user_id"], name: "index_spree_orders_on_user_id"
 
   create_table "spree_orders_promotions", id: false, force: true do |t|
@@ -234,17 +251,29 @@ ActiveRecord::Schema.define(version: 20140121171072) do
     t.integer "promotion_id"
   end
 
+  create_table "spree_payment_capture_events", force: true do |t|
+    t.decimal  "amount",     precision: 10, scale: 2, default: 0.0
+    t.integer  "payment_id"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  add_index "spree_payment_capture_events", ["payment_id"], name: "index_spree_payment_capture_events_on_payment_id"
+
   create_table "spree_payment_methods", force: true do |t|
     t.string   "type"
     t.string   "name"
     t.text     "description"
-    t.boolean  "active",      default: true
-    t.string   "environment", default: "development"
+    t.boolean  "active",       default: true
+    t.string   "environment",  default: "development"
     t.datetime "deleted_at"
     t.datetime "created_at"
     t.datetime "updated_at"
     t.string   "display_on"
+    t.boolean  "auto_capture"
   end
+
+  add_index "spree_payment_methods", ["id", "type"], name: "index_spree_payment_methods_on_id_and_type"
 
   create_table "spree_payments", force: true do |t|
     t.decimal  "amount",               precision: 10, scale: 2, default: 0.0, null: false
@@ -260,9 +289,11 @@ ActiveRecord::Schema.define(version: 20140121171072) do
     t.string   "identifier"
     t.string   "cvv_response_code"
     t.string   "cvv_response_message"
+    t.decimal  "uncaptured_amount",    precision: 10, scale: 2, default: 0.0
   end
 
   add_index "spree_payments", ["order_id"], name: "index_spree_payments_on_order_id"
+  add_index "spree_payments", ["payment_method_id"], name: "index_spree_payments_on_payment_method_id"
 
   create_table "spree_preferences", force: true do |t|
     t.text     "value"
@@ -275,10 +306,13 @@ ActiveRecord::Schema.define(version: 20140121171072) do
   add_index "spree_preferences", ["key"], name: "index_spree_preferences_on_key", unique: true
 
   create_table "spree_prices", force: true do |t|
-    t.integer "variant_id",                         null: false
-    t.decimal "amount",     precision: 8, scale: 2
-    t.string  "currency"
+    t.integer  "variant_id",                         null: false
+    t.decimal  "amount",     precision: 8, scale: 2
+    t.string   "currency"
+    t.datetime "deleted_at"
   end
+
+  add_index "spree_prices", ["variant_id", "currency"], name: "index_spree_prices_on_variant_id_and_currency"
 
   create_table "spree_product_option_types", force: true do |t|
     t.integer  "position"
@@ -304,7 +338,7 @@ ActiveRecord::Schema.define(version: 20140121171072) do
     t.text     "description"
     t.datetime "available_on"
     t.datetime "deleted_at"
-    t.string   "permalink"
+    t.string   "slug"
     t.text     "meta_description"
     t.string   "meta_keywords"
     t.integer  "tax_category_id"
@@ -316,8 +350,8 @@ ActiveRecord::Schema.define(version: 20140121171072) do
   add_index "spree_products", ["available_on"], name: "index_spree_products_on_available_on"
   add_index "spree_products", ["deleted_at"], name: "index_spree_products_on_deleted_at"
   add_index "spree_products", ["name"], name: "index_spree_products_on_name"
-  add_index "spree_products", ["permalink"], name: "index_spree_products_on_permalink"
-  add_index "spree_products", ["permalink"], name: "permalink_idx_unique", unique: true
+  add_index "spree_products", ["slug"], name: "index_spree_products_on_slug"
+  add_index "spree_products", ["slug"], name: "permalink_idx_unique", unique: true
 
   create_table "spree_products_promotion_rules", id: false, force: true do |t|
     t.integer "product_id"
@@ -343,13 +377,16 @@ ActiveRecord::Schema.define(version: 20140121171072) do
   end
 
   create_table "spree_promotion_actions", force: true do |t|
-    t.integer "activator_id"
+    t.integer "promotion_id"
     t.integer "position"
     t.string  "type"
   end
 
+  add_index "spree_promotion_actions", ["id", "type"], name: "index_spree_promotion_actions_on_id_and_type"
+  add_index "spree_promotion_actions", ["promotion_id"], name: "index_spree_promotion_actions_on_promotion_id"
+
   create_table "spree_promotion_rules", force: true do |t|
-    t.integer  "activator_id"
+    t.integer  "promotion_id"
     t.integer  "user_id"
     t.integer  "product_group_id"
     t.string   "type"
@@ -383,6 +420,8 @@ ActiveRecord::Schema.define(version: 20140121171072) do
     t.datetime "created_at"
     t.datetime "updated_at"
   end
+
+  add_index "spree_promotions", ["id", "type"], name: "index_spree_promotions_on_id_and_type"
 
   create_table "spree_properties", force: true do |t|
     t.string   "name"
@@ -440,10 +479,12 @@ ActiveRecord::Schema.define(version: 20140121171072) do
     t.decimal  "additional_tax_total", precision: 10, scale: 2, default: 0.0
     t.decimal  "promo_total",          precision: 10, scale: 2, default: 0.0
     t.decimal  "included_tax_total",   precision: 10, scale: 2, default: 0.0, null: false
+    t.decimal  "pre_tax_amount",       precision: 8,  scale: 2
   end
 
   add_index "spree_shipments", ["number"], name: "index_shipments_on_number"
   add_index "spree_shipments", ["order_id"], name: "index_spree_shipments_on_order_id"
+  add_index "spree_shipments", ["stock_location_id"], name: "index_spree_shipments_on_stock_location_id"
 
   create_table "spree_shipping_categories", force: true do |t|
     t.string   "name"
@@ -469,6 +510,7 @@ ActiveRecord::Schema.define(version: 20140121171072) do
     t.datetime "updated_at"
     t.string   "tracking_url"
     t.string   "admin_name"
+    t.integer  "tax_category_id"
   end
 
   create_table "spree_shipping_methods_zones", id: false, force: true do |t|
@@ -483,6 +525,7 @@ ActiveRecord::Schema.define(version: 20140121171072) do
     t.decimal  "cost",               precision: 8, scale: 2, default: 0.0
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.integer  "tax_rate_id"
   end
 
   add_index "spree_shipping_rates", ["shipment_id", "shipping_method_id"], name: "spree_shipping_rates_join_index", unique: true
@@ -677,7 +720,7 @@ ActiveRecord::Schema.define(version: 20140121171072) do
 
   create_table "spree_variants", force: true do |t|
     t.string   "sku",                                     default: "",    null: false
-    t.decimal  "weight",          precision: 8, scale: 2
+    t.decimal  "weight",          precision: 8, scale: 2, default: 0.0
     t.decimal  "height",          precision: 8, scale: 2
     t.decimal  "width",           precision: 8, scale: 2
     t.decimal  "depth",           precision: 8, scale: 2
